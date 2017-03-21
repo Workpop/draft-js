@@ -183,8 +183,8 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
     contentContainer.parentNode.insertBefore(clone, contentContainer);
     clone.focus();
 
-    this.setRenderGuard();
-    this.setMode('paste');
+    editor.setRenderGuard();
+    editor.setMode('paste');
 
     // Let native paste behaviour occur, then get what was pasted from the DOM.
     setTimeout(
