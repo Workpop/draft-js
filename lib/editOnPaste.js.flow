@@ -81,7 +81,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
   let html = data.getHTML();
 
   function handlePastedText(data: DataTransfer, text: ?string, html: ?string): void {
-    if (this.props.handlePastedText && isEventHandled(this.props.handlePastedText(text, html))) {
+    if (editor.props.handlePastedText && isEventHandled(editor.props.handlePastedText(text, html))) {
       return;
     }
 
@@ -124,7 +124,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
         var htmlFragment = DraftPasteProcessor.processHTML(html, editor.props.blockRenderMap);
         if (htmlFragment) {
           var htmlMap = BlockMapBuilder.createFromArray(htmlFragment);
-          editor.update(insertFragment(this.props.editorState, htmlMap));
+          editor.update(insertFragment(editor.props.editorState, htmlMap));
           return;
         }
       }
@@ -176,11 +176,11 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       clone.parentNode.removeChild(clone);
       this.exitCurrentMode();
       this.removeRenderGuard();
-      handlePastedText.call(this, data, text, html);
+      handlePastedText.call(editor, data, text, html);
     }, 0);
   } else {
     e.preventDefault();
-    handlePastedText.call(this, data, text, html);
+    handlePastedText.call(editor, data, text, html);
   }
 }
 
