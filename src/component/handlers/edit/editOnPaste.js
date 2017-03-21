@@ -177,7 +177,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       editor.setClipboard(null);
     }
 
-    if (textBlocks) {
+    if (textBlocks.length) {
       var character = CharacterMetadata.create({
         style: editorState.getCurrentInlineStyle(),
         entity: getEntityKeyForSelection(
@@ -239,7 +239,8 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
 
 function insertFragment(
   editorState: EditorState,
-  fragment: BlockMap
+  fragment: BlockMap,
+  entityMap: ?EntityMap,
 ): EditorState {
   var newContent = DraftModifier.replaceWithFragment(
     editorState.getCurrentContent(),
@@ -248,7 +249,7 @@ function insertFragment(
   );
   return EditorState.push(
     editorState,
-    newContent,
+    newContent.set('entityMap', entityMap),
     'insert-fragment'
   );
 }
