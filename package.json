@@ -24,7 +24,7 @@
     "pretest": "node node_modules/fbjs-scripts/node/check-dev-engines.js package.json",
     "build": "gulp",
     "postbuild": "node node_modules/fbjs-scripts/node/check-lib-requires.js lib",
-    "install": "npm run build",
+    "preinstall": "npm run build",
     "lint": "eslint .",
     "flow": "flow src",
     "test": "NODE_ENV=test jest",
