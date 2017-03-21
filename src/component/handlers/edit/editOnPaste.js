@@ -105,8 +105,8 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       html: ?string
   ): void {
     if (
-        this.props.handlePastedText &&
-        isEventHandled(this.props.handlePastedText(text, html))
+        editor.props.handlePastedText &&
+        isEventHandled(editor.props.handlePastedText(text, html))
     ) {
       return;
     }
@@ -167,7 +167,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
         );
         if (htmlFragment) {
           var htmlMap = BlockMapBuilder.createFromArray(htmlFragment);
-          editor.update(insertFragment(this.props.editorState, htmlMap));
+          editor.update(insertFragment(editor.props.editorState, htmlMap));
           return;
         }
       }
