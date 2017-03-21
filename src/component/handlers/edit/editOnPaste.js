@@ -43,8 +43,6 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
   e.preventDefault();
   var data = new DataTransfer(e.clipboardData);
 
-  const text = data.getText();
-  let html = data.getHTML();
   // Get files, unless this is likely to be a string the user wants inline.
   if (!data.isRichText()) {
     var files = data.getFiles();
@@ -85,14 +83,14 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
     }
   }
 
-  function handlePastedText(data: DataTransfer, text: ?string, html: ?string): void {
-    if (editor.props.handlePastedText && isEventHandled(editor.props.handlePastedText(text, html))) {
+  function handlePastedText(data: DataTransfer, pasteText: ?string, html: ?string): void {
+    if (editor.props.handlePastedText && isEventHandled(editor.props.handlePastedText(pasteText, html))) {
       return;
     }
 
     let textBlocks: Array<string> = [];
-    if (text) {
-      textBlocks = splitTextIntoTextBlocks(text);
+    if (pasteText) {
+      textBlocks = splitTextIntoTextBlocks(pasteText);
     }
 
     if (!editor.props.stripPastedStyles) {
@@ -112,7 +110,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
           // The copy may have been made within a single block, in which case the
           // editor key won't be part of the paste. In this case, just check
           // whether the pasted text matches the internal clipboard.
-          (textBlocks.length === 1 && internalClipboard.size === 1 && internalClipboard.first().getText() === text)
+          (textBlocks.length === 1 && internalClipboard.size === 1 && internalClipboard.first().getText() === pasteText)
         ) {
           editor.update(insertFragment(editor.props.editorState, internalClipboard));
           return;
@@ -134,7 +132,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       if (html) {
         var htmlFragment = DraftPasteProcessor.processHTML(html, editor.props.blockRenderMap);
         if (htmlFragment) {
-          var htmlMap = BlockMapBuilder.createFromArray(htmlFragment);
+          var htmlMap = BlockMapBuilder.createFromArray(htmlFragment.contentBlocks);
           editor.update(insertFragment(editor.props.editorState, htmlMap));
           return;
         }
@@ -147,18 +145,25 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
 
     if (textBlocks.length) {
       var character = CharacterMetadata.create({
-        style: editorState.getCurrentInlineStyle(),
-        entity: getEntityKeyForSelection(editorState.getCurrentContent(), editorState.getSelection()),
+        style: editor.props.editorState.getCurrentInlineStyle(),
+        entity: getEntityKeyForSelection(editor.props.editorState.getCurrentContent(), editor.props.editorState.getSelection()),
       });
 
       var textFragment = DraftPasteProcessor.processText(textBlocks, character);
 
       var textMap = BlockMapBuilder.createFromArray(textFragment);
+
+
       editor.update(insertFragment(editor.props.editorState, textMap));
     }
   }
 
-  if (html && text && html.replace(/\r\n/g, '\n') == text) {html = null;}
+  const text = data.getText();
+  let html = data.getHTML();
+
+  if (html && text && html.replace(/\r\n/g, '\n') == text) {
+    html = null;
+  }
 
   // Some browsers (IE/Edge) not support getting HTML from the clipboard,
   // but it is possible to get the HTML
@@ -171,7 +176,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
   // - Remove the extra contenteditable.
   // - Handle the pasted text in the normal way.
   if (doesNotSupportHTMLFromClipboard) {
-    let contentContainer = ReactDOM.findDOMNode(this).getElementsByClassName('public-DraftEditor-content')[0];
+    let contentContainer = ReactDOM.findDOMNode(editor).getElementsByClassName('public-DraftEditor-content')[0];
     let clone = contentContainer.cloneNode();
     clone.setAttribute('class', '');
     clone.setAttribute('style', 'position: fixed; left: -9999px');
@@ -186,15 +191,15 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       () => {
         html = clone.innerHTML;
         clone.parentNode.removeChild(clone);
-        this.exitCurrentMode();
-        this.removeRenderGuard();
+        editor.exitCurrentMode();
+        editor.removeRenderGuard();
         handlePastedText.call(editor, data, text, html);
       },
       0,
     );
   } else {
     e.preventDefault();
-    handlePastedText.call(editor, data, text, html);
+    handlePastedText(data, text, html);
   }
 }
 
