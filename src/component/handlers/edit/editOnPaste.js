@@ -183,7 +183,6 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
     contentContainer.parentNode.insertBefore(clone, contentContainer);
     clone.focus();
 
-    editor.setRenderGuard();
     editor.setMode('paste');
 
     // Let native paste behaviour occur, then get what was pasted from the DOM.
@@ -192,8 +191,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
         html = clone.innerHTML;
         clone.parentNode.removeChild(clone);
         editor.exitCurrentMode();
-        editor.removeRenderGuard();
-        handlePastedText.call(editor, data, text, html);
+        handlePastedText(data, text, html);
       },
       0,
     );
