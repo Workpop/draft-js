@@ -229,11 +229,11 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       clone.parentNode.removeChild(clone);
       this.exitCurrentMode();
       this.removeRenderGuard();
-      handlePastedText.call(this, data, text, html);
+      handlePastedText.call(editor, data, text, html);
     }, 0);
   } else {
     e.preventDefault();
-    handlePastedText.call(this, data, text, html);
+    handlePastedText.call(editor, data, text, html);
   }
 }
 
