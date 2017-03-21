@@ -41,6 +41,8 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
   e.preventDefault();
   var data = new DataTransfer(e.clipboardData);
 
+  const text = data.getText();
+  let html = data.getHTML();
   // Get files, unless this is likely to be a string the user wants inline.
   if (!data.isRichText()) {
     var files = data.getFiles();
@@ -76,9 +78,6 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       return;
     }
   }
-
-  const text = data.getText();
-  let html = data.getHTML();
 
   function handlePastedText(data: DataTransfer, text: ?string, html: ?string): void {
     if (editor.props.handlePastedText && isEventHandled(editor.props.handlePastedText(text, html))) {
@@ -147,7 +146,9 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
     }
   }
 
-  if (html && text && html.replace(/\r\n/g, '\n') == text) html = null;
+  if (html && text && html.replace(/\r\n/g, '\n') == text) {
+    html = null;
+  }
 
   // Some browsers (IE/Edge) not support getting HTML from the clipboard,
   // but it is possible to get the HTML
