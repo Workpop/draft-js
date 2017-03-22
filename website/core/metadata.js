@@ -17,8 +17,16 @@ module.exports = {
       "title": "Block Styling",
       "layout": "docs",
       "category": "Advanced Topics",
-      "next": "advanced-topics-block-components",
+      "next": "advanced-topics-custom-block-render-map",
       "permalink": "docs/advanced-topics-block-styling.html"
+    },
+    {
+      "id": "advanced-topics-custom-block-render-map",
+      "title": "Custom Block Rendering",
+      "layout": "docs",
+      "category": "Advanced Topics",
+      "next": "advanced-topics-block-components",
+      "permalink": "docs/advanced-topics-custom-block-render-map.html"
     },
     {
       "id": "advanced-topics-decorators",
@@ -33,7 +41,7 @@ module.exports = {
       "title": "Entities",
       "layout": "docs",
       "category": "Advanced Topics",
-      "next": "advanced-topics-decorators",
+      "next": "v0-10-api-migration",
       "permalink": "docs/advanced-topics-entities.html"
     },
     {
@@ -83,6 +91,14 @@ module.exports = {
       "category": "Advanced Topics",
       "next": "advanced-topics-issues-and-pitfalls",
       "permalink": "docs/advanced-topics-text-direction.html"
+    },
+    {
+      "id": "v0-10-api-migration",
+      "title": "v0.10 API Migration",
+      "layout": "docs",
+      "category": "Advanced Topics",
+      "next": "advanced-topics-decorators",
+      "permalink": "docs/v0-10-api-migration.html"
     },
     {
       "id": "api-reference-atomic-block-utils",

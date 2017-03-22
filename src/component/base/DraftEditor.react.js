@@ -49,12 +49,12 @@ const allowSpellCheck = !isIE;
 // Define a set of handler objects to correspond to each possible `mode`
 // of editor behavior.
 const handlerMap = {
-  'edit': DraftEditorEditHandler,
-  'composite': DraftEditorCompositionHandler,
-  'drag': DraftEditorDragHandler,
-  'cut': null,
-  'paste': null,
-  'render': null,
+  edit: DraftEditorEditHandler,
+  composite: DraftEditorCompositionHandler,
+  drag: DraftEditorDragHandler,
+  cut: null,
+  paste: null,
+  render: null,
 };
 
 type State = {
@@ -181,7 +181,7 @@ class DraftEditor extends React.Component {
    * editor mode, if any has been specified.
    */
   _buildHandler(eventName: string): Function {
-    return (e) => {
+    return e => {
       if (!this.props.readOnly) {
         const method = this._handler && this._handler[eventName];
         method && method(this, e);
@@ -190,11 +190,9 @@ class DraftEditor extends React.Component {
   }
 
   _showPlaceholder(): boolean {
-    return (
-      !!this.props.placeholder &&
+    return !!this.props.placeholder &&
       !this.props.editorState.isInCompositionMode() &&
-      !this.props.editorState.getCurrentContent().hasText()
-    );
+      !this.props.editorState.getCurrentContent().hasText();
   }
 
   _renderPlaceholder(): ?React.Element<any> {
@@ -226,20 +224,22 @@ class DraftEditor extends React.Component {
       wordWrap: 'break-word',
     };
 
+    const pasteTrapStyle = {
+      maxWidth: '1px',
+      maxHeight: '1px',
+      overflow: 'hidden',
+      position: 'absolute',
+      opacity: '0.01',
+    };
+
     return (
       <div className={rootClass}>
         {this._renderPlaceholder()}
-        <div
-          className={cx('DraftEditor/editorContainer')}
-          ref="editorContainer">
+        <div className={cx('DraftEditor/editorContainer')} ref="editorContainer">
           <div
-            aria-activedescendant={
-              readOnly ? null : this.props.ariaActiveDescendantID
-            }
+            aria-activedescendant={readOnly ? null : this.props.ariaActiveDescendantID}
             aria-autocomplete={readOnly ? null : this.props.ariaAutoComplete}
-            aria-describedby={
-              this._showPlaceholder() ? this._placeholderAccessibilityID : null
-            }
+            aria-describedby={this._showPlaceholder() ? this._placeholderAccessibilityID : null}
             aria-expanded={readOnly ? null : this.props.ariaExpanded}
             aria-haspopup={readOnly ? null : this.props.ariaHasPopup}
             aria-label={this.props.ariaLabel}
@@ -265,21 +265,19 @@ class DraftEditor extends React.Component {
             onKeyPress={this._onKeyPress}
             onKeyUp={this._onKeyUp}
             onMouseUp={this._onMouseUp}
-            onPaste={this._onPaste}
             onSelect={this._onSelect}
             ref="editor"
-            role={readOnly ? null : (this.props.role || 'textbox')}
+            role={readOnly ? null : this.props.role || 'textbox'}
             spellCheck={allowSpellCheck && this.props.spellCheck}
             style={contentStyle}
             suppressContentEditableWarning
-            tabIndex={this.props.tabIndex}>
+            tabIndex={this.props.tabIndex}
+          >
             <DraftEditorContents
               blockRenderMap={this.props.blockRenderMap}
               blockRendererFn={this.props.blockRendererFn}
               blockStyleFn={this.props.blockStyleFn}
-              customStyleMap={
-                {...DefaultDraftInlineStyle, ...this.props.customStyleMap}
-              }
+              customStyleMap={{...DefaultDraftInlineStyle, ...this.props.customStyleMap}}
               customStyleFn={this.props.customStyleFn}
               editorKey={this._editorKey}
               editorState={this.props.editorState}
@@ -287,6 +285,12 @@ class DraftEditor extends React.Component {
             />
           </div>
         </div>
+        <div
+          contentEditable={true}
+          style={pasteTrapStyle}
+          ref={ref => this._pasteTrap = ref}
+          suppressContentEditableWarning
+        />
       </div>
     );
   }
@@ -294,6 +298,12 @@ class DraftEditor extends React.Component {
   componentDidMount(): void {
     this.setMode('edit');
 
+    // Unfortunately, due to https://github.com/facebook/react/issues/8909
+    // it is not possible to set up an onPaste handler through react.
+    // Manually use addEventListener and removeEventListener below.
+    // See the comments in editOnPaste for why this is needed.
+    const editorNode = ReactDOM.findDOMNode(this.refs.editor);
+    editorNode.addEventListener('paste', this._onPaste);
     /**
      * IE has a hardcoded "feature" that attempts to convert link text into
      * anchors in contentEditable DOM. This breaks the editor's expectations of
@@ -316,6 +326,11 @@ class DraftEditor extends React.Component {
   componentWillUpdate(nextProps: DraftEditorProps): void {
     this._blockSelectEvents = true;
     this._latestEditorState = nextProps.editorState;
+  }
+
+  componentWillUnmount(): void {
+    const editorNode = ReactDOM.findDOMNode(this.refs.editor);
+    editorNode.removeEventListener('paste', this._onPaste);
   }
 
   componentDidUpdate(): void {
@@ -353,12 +368,7 @@ class DraftEditor extends React.Component {
     // you're clicking on an input element but not directly on a character.
     // Put the cursor back where it was before the blur.
     if (!alreadyHasFocus) {
-      this.update(
-        EditorState.forceSelection(
-          editorState,
-          editorState.getSelection()
-        )
-      );
+      this.update(EditorState.forceSelection(editorState, editorState.getSelection()));
     }
   }
 

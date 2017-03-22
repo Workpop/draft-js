@@ -40,8 +40,14 @@ const doesNotSupportHTMLFromClipboard = UserAgent.isBrowser('IE') ||
  * Paste content.
  */
 function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
-  e.preventDefault();
-  var data = new DataTransfer(e.clipboardData);
+  // e in this case is a native DOM event, instead of a SyntheticClipboardEvent,
+  // when the event is at #document
+  // For the pasteTrap to work, either we need to be capturing, or e.currentTarget needs to be
+  // the contentEditable div. So, e in this case comes from a direct editor.addEventListener
+  // Therefore, we need to replicate anything that the SyntheticClipboardEvent does that is used
+  // Currently, that is only getting the clipboard, which involves falling back to window for IE & Edge.
+  const clipboard = 'clipboardData' in event ? e.clipboardData : window.clipboardData;
+  var data = new DataTransfer(clipboard);
 
   // Get files, unless this is likely to be a string the user wants inline.
   if (!data.isRichText()) {
@@ -102,7 +108,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
       // editor in Firefox and IE will not include empty lines. The resulting
       // paste will preserve the newlines correctly.
       const internalClipboard = editor.getClipboard();
-      if (data.isRichText() && html && internalClipboard) {
+      if ((text && html) && internalClipboard) {
         if (
           // If the editorKey is present in the pasted HTML, it should be safe to
           // assume this is an internal paste.
@@ -115,19 +121,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
           editor.update(insertFragment(editor.props.editorState, internalClipboard));
           return;
         }
-      } else if (
-        internalClipboard &&
-        data.types.includes('com.apple.webarchive') &&
-        !data.types.includes('text/html') &&
-        areTextBlocksAndClipboardEqual(textBlocks, internalClipboard)
-      ) {
-        // Safari does not properly store text/html in some cases.
-        // Use the internalClipboard if present and equal to what is on
-        // the clipboard. See https://bugs.webkit.org/show_bug.cgi?id=19893.
-        editor.update(insertFragment(editor.props.editorState, internalClipboard));
-        return;
       }
-
       // If there is html paste data, try to parse that.
       if (html) {
         var htmlFragment = DraftPasteProcessor.processHTML(html, editor.props.blockRenderMap);
@@ -146,59 +140,56 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
     if (textBlocks.length) {
       var character = CharacterMetadata.create({
         style: editor.props.editorState.getCurrentInlineStyle(),
-        entity: getEntityKeyForSelection(editor.props.editorState.getCurrentContent(), editor.props.editorState.getSelection()),
+        entity: getEntityKeyForSelection(
+          editor.props.editorState.getCurrentContent(),
+          editor.props.editorState.getSelection(),
+        ),
       });
 
       var textFragment = DraftPasteProcessor.processText(textBlocks, character);
 
       var textMap = BlockMapBuilder.createFromArray(textFragment);
 
-
       editor.update(insertFragment(editor.props.editorState, textMap));
     }
   }
 
   const text = data.getText();
-  let html = data.getHTML();
+  let html = getHTML(data);
 
-  if (html && text && html.replace(/\r\n/g, '\n') == text) {
-    html = null;
-  }
-
-  // Some browsers (IE/Edge) not support getting HTML from the clipboard,
-  // but it is possible to get the HTML
-  // if we allow native paste behaviour to occur.
-  // To do so, we take the following steps:
-  // - Create a new (off-screen) contenteditable DOM element
-  //    and redirect focus to it.
-  // - Let native paste happen in the focused element.
-  // - Grab the HTML.
-  // - Remove the extra contenteditable.
-  // - Handle the pasted text in the normal way.
-  if (doesNotSupportHTMLFromClipboard) {
-    let contentContainer = ReactDOM.findDOMNode(editor).getElementsByClassName('public-DraftEditor-content')[0];
-    let clone = contentContainer.cloneNode();
-    clone.setAttribute('class', '');
-    clone.setAttribute('style', 'position: fixed; left: -9999px');
-    contentContainer.parentNode.insertBefore(clone, contentContainer);
-    clone.focus();
-
+  if (text && !html) {
+    // The pasted content has text, but not HTML. For certain browsers (old versions of Safari, IE, and Edge)
+    // the html isn't provided as part of the clipboardData. To work around this, follow the following algorithm:
+    // Do NOT call e.preventDefault(). Instead, we want the browser to paste, just not in the editor element.
+    // Instead, move focus to a dummy contentEditable div (the pasteTrap),
+    // let the paste event through, and then copy the html out of the paste trap.
+    // It is important to call setMode('paste') to disable the editor's event handlers (so it is blisfully unaware)
+    // and then to properly undo the sleight-of-hand created.
     editor.setMode('paste');
-
-    // Let native paste behaviour occur, then get what was pasted from the DOM.
+    const pasteTrap = editor._pasteTrap;
+    pasteTrap.focus();
     setTimeout(
       () => {
-        html = clone.innerHTML;
-        clone.parentNode.removeChild(clone);
+        html = pasteTrap.innerHTML;
+        editor.focus();
+        pasteTrap.innerHTML = '';
         editor.exitCurrentMode();
-        handlePastedText(data, text, html);
+        handlePastedText(editor, text, html);
       },
       0,
     );
   } else {
     e.preventDefault();
-    handlePastedText(data, text, html);
+    handlePastedText(editor, text, html);
   }
+}
+
+function getHTML(data: DataTransfer) {
+  // Work around DataTransfer issue in IE11 https://github.com/facebook/draft-js/issues/656
+  if (data.data.getData && !data.types.length) {
+    return undefined;
+  }
+  return data.getHTML();
 }
 
 function insertFragment(editorState: EditorState, fragment: BlockMap, entityMap: ?EntityMap): EditorState {
